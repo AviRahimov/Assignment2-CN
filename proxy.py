@@ -10,13 +10,13 @@ INDEFINITE = api.CalculatorHeader.MAX_CACHE_CONTROL
 
 
 def process_request(request: api.CalculatorHeader, server_address: tuple[str, int]) -> tuple[api.CalculatorHeader, int, int, bool, bool, bool]:
-    '''
+    """
     Function which processes the client request if specified we cache the result
     Returns the response, the time remaining before the server deems the response stale, the time remaining before the client deems the response stale, whether the response returned was from the cache, whether the response was stale, and whether we cached the response
     If the request.cache_control is 0, we don't use the cache and send a new request to the server. (like a reload)
     If the request.cache_control < time() - cache[request].unix_time_stamp, the client doesn't allow us to use the cache and we send a new request to the server.
     If the cache[request].cache_control is 0, the response must not be cached.
-    '''
+    """
     if not request.is_request:
         raise TypeError("Received a response instead of a request")
 
@@ -83,9 +83,10 @@ def proxy(proxy_address: tuple[str, int], server_adress: tuple[str, int]) -> Non
         # SO_REUSEADDR is a socket option that allows the socket to be bound to an address that is already in use.
         proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        # Prepare the proxy socket
-        # * Fill in start (1)
-        # * Fill in end (1)
+        # listen to all IP's in the default host given in api file with default port specified in api file
+        proxy_socket.bind((api.DEFAULT_PROXY_HOST, api.DEFAULT_PROXY_PORT))
+        # allowing to only one packet to wait in the queue i.e. only handles one connection at a given time
+        proxy_socket.listen(1)
 
         threads = []
         print(f"Listening on {proxy_address[0]}:{proxy_address[1]}")
@@ -93,8 +94,8 @@ def proxy(proxy_address: tuple[str, int], server_adress: tuple[str, int]) -> Non
         while True:
             try:
                 # Establish connection with client.
-                
-                client_socket, client_address = # * Fill in start (2) # * Fill in end (2)
+                # The proxy socket wait for the client connection
+                client_socket, client_address = proxy_socket.accept()
 
                 # Create a new thread to handle the client request
                 thread = threading.Thread(target=client_handler, args=(
@@ -110,16 +111,15 @@ def proxy(proxy_address: tuple[str, int], server_adress: tuple[str, int]) -> Non
 
 
 def client_handler(client_socket: socket.socket, client_address: tuple[str, int], server_address: tuple[str, int]) -> None:
-    '''
+    """
     Function which handles client requests
-    '''
+    """
     client_prefix = f"{{{client_address[0]}:{client_address[1]}}}"
     with client_socket:  # closes the socket when the block is exited
         print(f"{client_prefix} Connected established")
         while True:
-            # Receive data from the client
-            
-            data = # * Fill in start (3) # * Fill in end (3)
+            # reading bytes from the socket provided in api file(BUFFER_SIZE)
+            data = client_socket.recv(api.BUFFER_SIZE)
             
             if not data:
                 break
@@ -153,8 +153,9 @@ def client_handler(client_socket: socket.socket, client_address: tuple[str, int]
                     f"{client_prefix} Sending response of length {len(response)} bytes")
 
                 # Send the response back to the client
-                # * Fill in start (4)
-                # * Fill in end (4)
+                client_socket.sendall(response)
+                # closing the connection socket to specific client(current client) and not to the entering socket
+                client_socket.close()
                 
             except Exception as e:
                 print(f"Unexpected server error: {e}")

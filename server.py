@@ -87,9 +87,10 @@ def server(host: str, port: int) -> None:
         # SO_REUSEADDR is a socket option that allows the socket to be bound to an address that is already in use.
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        # Prepare the server socket
-        # * Fill in start (1)
-        # * Fill in end (1)
+        # listen to all IP's in host with specified port
+        server_socket.bind((host, port))
+        # allowing to only one packet to wait in the queue i.e. only handles one connection at a given time
+        server_socket.listen(1)
 
         threads = []
         print(f"Listening on {host}:{port}")
@@ -97,8 +98,8 @@ def server(host: str, port: int) -> None:
         while True:
             try:
                 # Establish connection with client.
-                
-                client_socket, address = # * Fill in start (2) # * Fill in end (2)
+                # The client socket wait for the client connection
+                client_socket, address = server_socket.accept()
 
                 # Create a new thread to handle the client request
                 thread = threading.Thread(target=client_handler, args=(
@@ -114,16 +115,16 @@ def server(host: str, port: int) -> None:
 
 
 def client_handler(client_socket: socket.socket, client_address: tuple[str, int]) -> None:
-    '''
+    """
     Function which handles client requests
-    '''
+    """
     client_addr = f"{client_address[0]}:{client_address[1]}"
     client_prefix = f"{{{client_addr}}}"
     with client_socket:  # closes the socket when the block is exited
         print(f"Conection established with {client_addr}")
         while True:
-            
-            data = # * Fill in start (3) # * Fill in end (3)
+            # reading bytes from the socket provided in api file(BUFFER_SIZE)
+            data = client_socket.recv(api.BUFFER_SIZE)
             if not data:
                 break
             try:
@@ -142,8 +143,10 @@ def client_handler(client_socket: socket.socket, client_address: tuple[str, int]
                 print(
                     f"{client_prefix} Sending response of length {len(response)} bytes")
 
-                # * Fill in start (4)
-                # * Fill in end (4)
+                # sending the response message back to the client
+                client_socket.sendall(response)
+                # closing the connection socket to specific client(current client) and not to the entering socket
+                client_socket.close()
 
             except Exception as e:
                 print(f"Unexpected server error: {e}")
