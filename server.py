@@ -10,11 +10,11 @@ CACHE_CONTROL = 2 ** 16 - 1
 
 
 def calculate(expression: api.Expr, steps: list[str] = []) -> tuple[numbers.Real, list[api.Expression]]:
-    '''    
+    """
     Function which calculates the result of an expression and returns the result and the steps taken to calculate it.
     The function recursively descends into the expression tree and calculates the result of the expression.
     Each expression wraps the result of its subexpressions in parentheses and adds the result to the steps list.
-    '''
+    """
     expr = api.type_fallback(expression)
     const = None
     if isinstance(expr, api.Constant) or isinstance(expr, api.NamedConstant):
@@ -57,9 +57,9 @@ def calculate(expression: api.Expr, steps: list[str] = []) -> tuple[numbers.Real
 
 
 def process_request(request: api.CalculatorHeader) -> api.CalculatorHeader:
-    '''
+    """
     Function which processes a CalculatorRequest and builds a CalculatorResponse.
-    '''
+    """
     result, steps = None, []
     try:
         if request.is_request:
@@ -87,7 +87,8 @@ def server(host: str, port: int) -> None:
         # SO_REUSEADDR is a socket option that allows the socket to be bound to an address that is already in use.
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        # listen to all IP's in host with specified port
+        # Bind the server socket to the specified host and port.
+        # This sets the address and port on which the server will listen for incoming connections.
         server_socket.bind((host, port))
         # allowing to only one packet to wait in the queue i.e. only handles one connection at a given time
         server_socket.listen(1)
@@ -98,7 +99,10 @@ def server(host: str, port: int) -> None:
         while True:
             try:
                 # Establish connection with client.
-                # The client socket wait for the client connection
+
+                # Wait for an incoming connection and accept it. In the accept() method,
+                # the server waits until the client connects and returns a socket object that represents the client and
+                # its address.
                 client_socket, address = server_socket.accept()
 
                 # Create a new thread to handle the client request
@@ -143,7 +147,8 @@ def client_handler(client_socket: socket.socket, client_address: tuple[str, int]
                 print(
                     f"{client_prefix} Sending response of length {len(response)} bytes")
 
-                # sending the response message back to the client
+                # Send the response bytes back to the client over the client_socket connection using
+                # the sendall() method to ensure all data is sent. The response variable contains the message to be sent.
                 client_socket.sendall(response)
                 # closing the connection socket to specific client(current client) and not to the entering socket
                 client_socket.close()
