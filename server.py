@@ -87,11 +87,16 @@ def server(host: str, port: int) -> None:
         # SO_REUSEADDR is a socket option that allows the socket to be bound to an address that is already in use.
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        # Bind the server socket to the specified host and port.
-        # This sets the address and port on which the server will listen for incoming connections.
+        # Prepare the server socket
+        # * Fill in start (1)
+        # When a socket is created, it exists in a name space (address family) but has no address assigned to it.
+        # bind() assigns the address specified by addr to the socket.
         server_socket.bind((host, port))
-        # allowing to only one packet to wait in the queue i.e. only handles one connection at a given time
-        server_socket.listen(1)
+
+        # The backlog specifies the number of unaccepted (still pending) connections that the system will allow before refusing new connections
+        # listen() enables the server to accept connections.
+        server_socket.listen(5)
+        # * Fill in end (1)
 
         threads = []
         print(f"Listening on {host}:{port}")
@@ -99,11 +104,9 @@ def server(host: str, port: int) -> None:
         while True:
             try:
                 # Establish connection with client.
-
-                # Wait for an incoming connection and accept it. In the accept() method,
-                # the server waits until the client connects and returns a socket object that represents the client and
-                # its address.
+                # * Fill in start (2)
                 client_socket, address = server_socket.accept()
+                # * Fill in end (2)
 
                 # Create a new thread to handle the client request
                 thread = threading.Thread(target=client_handler, args=(
@@ -127,8 +130,9 @@ def client_handler(client_socket: socket.socket, client_address: tuple[str, int]
     with client_socket:  # closes the socket when the block is exited
         print(f"Conection established with {client_addr}")
         while True:
-            # reading bytes from the socket provided in api file(BUFFER_SIZE)
+            # * Fill in start (3)
             data = client_socket.recv(api.BUFFER_SIZE)
+            # * Fill in end (3)
             if not data:
                 break
             try:
@@ -147,11 +151,9 @@ def client_handler(client_socket: socket.socket, client_address: tuple[str, int]
                 print(
                     f"{client_prefix} Sending response of length {len(response)} bytes")
 
-                # Send the response bytes back to the client over the client_socket connection using
-                # the sendall() method to ensure all data is sent. The response variable contains the message to be sent.
+                # * Fill in start (4)
                 client_socket.sendall(response)
-                # closing the connection socket to specific client(current client) and not to the entering socket
-                client_socket.close()
+                # * Fill in end (4)
 
             except Exception as e:
                 print(f"Unexpected server error: {e}")

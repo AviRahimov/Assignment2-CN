@@ -11,13 +11,11 @@ INDEFINITE = api.CalculatorHeader.MAX_CACHE_CONTROL
 
 def process_request(request: api.CalculatorHeader, server_address: tuple[str, int]) -> tuple[api.CalculatorHeader, int, int, bool, bool, bool]:
     """
-    Function which processes the client request if specified we cache the result Returns the response,
-    the time remaining before the server deems the response stale, the time remaining before the client deems the
-    response stale, whether the response returned was from the cache, whether the response was stale, and whether we
-    cached the response If the request.cache_control is 0, we don't use the cache and send a new request to the
-    server. (like a reload) If the request.cache_control < time() - cache[request].unix_time_stamp, the client
-    doesn't allow us to use the cache and we send a new request to the server. If the cache[request].cache_control is
-    0, the response must not be cached.
+    Function which processes the client request if specified we cache the result
+    Returns the response, the time remaining before the server deems the response stale, the time remaining before the client deems the response stale, whether the response returned was from the cache, whether the response was stale, and whether we cached the response
+    If the request.cache_control is 0, we don't use the cache and send a new request to the server. (like a reload)
+    If the request.cache_control < time() - cache[request].unix_time_stamp, the client doesn't allow us to use the cache and we send a new request to the server.
+    If the cache[request].cache_control is 0, the response must not be cached.
     """
     if not request.is_request:
         raise TypeError("Received a response instead of a request")
@@ -27,8 +25,7 @@ def process_request(request: api.CalculatorHeader, server_address: tuple[str, in
     client_time_remaining = None
     was_stale = False
     cached = False
-    # Check if the data is in the cache, if the requests cache-control is 0 we must not use the cache and request a
-    # new response
+    # Check if the data is in the cache, if the requests cache-control is 0 we must not use the cache and request a new response
     if ((data, request.show_steps) in cache) and (request.cache_control != 0):
         response = cache[(data, request.show_steps)]
         current_time = int(time.time())
@@ -43,8 +40,7 @@ def process_request(request: api.CalculatorHeader, server_address: tuple[str, in
         else:  # response is 'stale'
             was_stale = True
 
-    # Request is not in the cache or the response is 'stale' so we need to send a new request to the server and cache
-    # the response
+    # Request is not in the cache or the response is 'stale' so we need to send a new request to the server and cache the response
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
         try:
             server_socket.connect(server_address)
@@ -87,11 +83,16 @@ def proxy(proxy_address: tuple[str, int], server_adress: tuple[str, int]) -> Non
         # SO_REUSEADDR is a socket option that allows the socket to be bound to an address that is already in use.
         proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        # Bind the proxy socket to the default proxy host and port specified in the API configuration
-        # This will allow the socket to listen for incoming connections on all IP addresses associated with the host
-        proxy_socket.bind((api.DEFAULT_PROXY_HOST, api.DEFAULT_PROXY_PORT))
-        # allowing to only one packet to wait in the queue i.e. only handles one connection at a given time
-        proxy_socket.listen(1)
+        # Prepare the proxy socket
+        # * Fill in start (1)
+        # When a socket is created, it exists in a name space (address family) but has no address assigned to it.
+        # bind() assigns the address specified by addr to the socket.
+        proxy_socket.bind(proxy_address)
+
+        # The backlog specifies the number of unaccepted (still pending) connections that the system will allow before refusing new connections
+        # listen() enables the server to accept connections.
+        proxy_socket.listen(5)
+        # * Fill in end (1)
 
         threads = []
         print(f"Listening on {proxy_address[0]}:{proxy_address[1]}")
@@ -99,11 +100,9 @@ def proxy(proxy_address: tuple[str, int], server_adress: tuple[str, int]) -> Non
         while True:
             try:
                 # Establish connection with client.
-
-                # Wait for an incoming client connection on the proxy socket, and accept the connection when it arrives
-                # This returns a new socket object representing the client connection,
-                # and a tuple containing the client's IP address and port number
+                # * Fill in start (2)
                 client_socket, client_address = proxy_socket.accept()
+                # * Fill in end (2)
 
                 # Create a new thread to handle the client request
                 thread = threading.Thread(target=client_handler, args=(
@@ -126,9 +125,10 @@ def client_handler(client_socket: socket.socket, client_address: tuple[str, int]
     with client_socket:  # closes the socket when the block is exited
         print(f"{client_prefix} Connected established")
         while True:
-            # reading bytes from the socket provided in api file(BUFFER_SIZE)
+            # Receive data from the client
+            # * Fill in start (3)
             data = client_socket.recv(api.BUFFER_SIZE)
-            
+            # * Fill in end (3)
             if not data:
                 break
             try:
@@ -161,10 +161,9 @@ def client_handler(client_socket: socket.socket, client_address: tuple[str, int]
                     f"{client_prefix} Sending response of length {len(response)} bytes")
 
                 # Send the response back to the client
+                # * Fill in start (4)
                 client_socket.sendall(response)
-                # closing the connection socket to specific client(current client) and not to the entering socket
-                client_socket.close()
-                
+                # * Fill in end (4)
             except Exception as e:
                 print(f"Unexpected server error: {e}")
                 client_socket.sendall(api.CalculatorHeader.from_error(api.CalculatorServerError(
